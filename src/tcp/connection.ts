@@ -104,4 +104,9 @@ export class TCPConn {
 			});
 		});
 	}
+
+  destroy() {
+    this.socket.destroy();
+    this.ended = true;
+  }
 }

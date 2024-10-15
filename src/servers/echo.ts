@@ -1,5 +1,5 @@
-import { DynBuffer } from "../data-structures/dynamic-buffer";
-import type { TCPConn } from "../tcp/connection";
+import { DynBuffer } from "@/data-structures/dynamic-buffer";
+import type { TCPConn } from "@/tcp/connection";
 
 /**
  * The echo server consists of messages separated by `\n` (the newline character).

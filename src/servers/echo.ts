@@ -8,16 +8,16 @@ import type { TCPConn } from "../tcp/connection";
  *  * Otherwise, echo the message back with the prefix 'Echo: '
  */
 export async function serve(conn: TCPConn): Promise<void> {
-  const buf = new DynBuffer()
+  const buf = new DynBuffer();
 
   while (true) {
-    console.log("buffer length: ", buf.length)
+    console.log("buffer length: ", buf.length);
     console.log("Buffer actual length: ", buf.data.length);
     console.log("data in buf: ", buf.data.toString());
     const msg: null | Buffer = buf.stripTill("\n");
-    
+
     if (!msg) {
-      console.log("Waiting to read...")
+      console.log("Waiting to read...");
       const data: Buffer = await conn.read();
       buf.push(data);
 
@@ -28,17 +28,14 @@ export async function serve(conn: TCPConn): Promise<void> {
       continue;
     }
 
-    if (msg.equals(Buffer.from('quit\n'))) {
+    if (msg.equals(Buffer.from("quit\n"))) {
       await conn.write(Buffer.from("Bye.\n"));
       conn.destroy();
       return;
     } else {
-      const reply = Buffer.concat([
-        Buffer.from("Echo: "),
-        msg
-      ]);
+      const reply = Buffer.concat([Buffer.from("Echo: "), msg]);
 
-      await conn.write(reply)
+      await conn.write(reply);
     }
   }
 }

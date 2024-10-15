@@ -105,8 +105,8 @@ export class TCPConn {
 		});
 	}
 
-  destroy() {
-    this.socket.destroy();
-    this.ended = true;
-  }
+	destroy() {
+		this.socket.destroy();
+		this.ended = true;
+	}
 }

@@ -36,3 +36,66 @@ Semantics also include representation metadata that describe how content is inte
 ## Length Requirements
 
 At a minimum, a recipient must be able to parse and process protocol element lengths that are at least as long as the values that it generates for those same protocol elements in other messages.
+
+# Message Format
+
+All `HTTP/1.1` messages consist of a start-line followed by a sequence of octets in a format similar to the Internet Message Format:
+ - zero or more header fields (collectively referred to as the "headers" or the "header section")
+ - an empty line indicating the end of the header selection
+ - an optional message body
+
+```
+    HTTP-message = start-line
+                   *( header-field CRLF )
+                   CRLF
+                   [ message-body ]
+```
+
+The normal procedure for parsing an HTTP message is to 
+1. read the start-line into a structure
+2. read each header field into a hash table by field name until the empty line,
+3. use the parsed data to determine if a message body is expected
+4. If a message body has been indicated, then it is read as a stream until an amount of octets equal to the message body length is read or the connection is closed.
+
+> [!WARNING]
+> A recipient must parse an HTTP message as a sequence of octets in an encoding that is a superset of US-ASCII.
+> Parsing an HTTP message as a stream of Unicode characters, without regard for the specific encoding, creates security vulnerabilities due to the varying ways that string processing libraries handle invalid multibyte character sequences that contain the octet LF (%x0A).
+> String based parsers can only be safely used within protocol elements after the element has been extracted from the message, such as within a header field-value after message parsing has delineated the individual fields.
+
+An HTTP message can be parsed as a stream for incremental processing or forwarding downstream.
+However, recipients cannot rely on incremental delivery of partial messages, since some implementations will buffer or delay message forwarding for the sake of network efficiency, security checks, or payload transformations.
+
+A sender must not send whitespace between the start-line and the first header field.
+A recipient that receives whitespace between the start-line and the first header field must either reject the message as invalid or consume each whitespace-preceded line without further processing of it.
+
+The presence of such whitespace in a request might be an attempt to trick a new server into ignoring that field or processing the line after it as a new request, either of which might result in a security vulnerability if other implementations within the request chain interpret the same message differently.
+
+## Start Line
+
+An HTTP message can be either a request from client to server or a response from server to client.
+
+Syntactically, the two types of message differ only in the start-line, which is either a request-line (for requests) or a status-line (for responses), and in the algorithm for determining the length of the message body.
+
+In theory, a client could receive requests and a server could receive responses, distinguishing them by their different start-line formats, but, in practice, servers are implemented to only expect a request (a response is interpreted as an unknown or invalid request method) and clients are implemented to only expect a response.
+
+### Request Line
+
+A request-line begins with a method token, followed by a single space (SP), the request-target, another single space(SP), the protocol version, and ends with CRLF.
+
+```
+request-line = method SP request-target SP HTTP-version CRLF
+```
+
+The method token indicates the request method to be performed on the target resource.
+> [!Warning] The request method is case-sensitive
+
+The request target identifies the target resource upon which to apply the request.
+
+Recipients typically parse the request-line into its component parts by splitting on whitespace, since no whitespace is allowed in the three components.
+Unfortunately, some user agents fail to properly encode or exclude whitespace found in hypertext references, resulting in those disallowed characters being sent in a request-target.
+Recipients of an invalid request-line should respond with either a 400 (Bad request) error or a 301 (Moved Permanently) redirect with the request-target properly encoded.
+A recipient should not attempt to autocorrect and then process the request without a redirect, since the invalid request-line might be deliberately crafted to bypass security filters along the request chain.
+
+HTTP does not place a predefined limit on the length of a request-line. 
+A server that receives a method longer than any that it implements should respond with a 501 (Not Implemented) status code.
+A server that receives a request-target longer than any URI it wishes to parse must respond with a 414 (URI Too Long) status code.

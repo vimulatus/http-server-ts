@@ -1,7 +1,5 @@
-export enum HttpMethods {
-	GET = "GET",
-	POST = "POST",
-	DELETE = "DELETE",
-	PUT = "PUT",
-	OPTIONS = "OPTIONS",
-}
+import { z } from "zod";
+
+export const httpMethods = z.enum(["GET", "POST", "DELETE", "PUT", "OPTIONS"]);
+
+export type HttpMethods = z.infer<typeof httpMethods>;

@@ -1,3 +1,4 @@
+import { CRLF } from "@/constants";
 import { DynBuffer } from "@/data-structures/dynamic-buffer";
 import type { TCPConn } from "@/tcp/connection";
 
@@ -8,34 +9,31 @@ import type { TCPConn } from "@/tcp/connection";
  *  * Otherwise, echo the message back with the prefix 'Echo: '
  */
 export async function serve(conn: TCPConn): Promise<void> {
-  const buf = new DynBuffer();
+	const buf = new DynBuffer();
 
-  while (true) {
-    console.log("buffer length: ", buf.length);
-    console.log("Buffer actual length: ", buf.data.length);
-    console.log("data in buf: ", buf.data.toString());
-    const msg: null | Buffer = buf.stripTill("\n");
+	while (true) {
+		console.log(buf.data);
+		const msg: null | DynBuffer = buf.stripStart("\n", true);
+		if (!msg) {
+			console.log("Waiting to read...");
+			const data: Buffer = await conn.read();
+			buf.push(data);
 
-    if (!msg) {
-      console.log("Waiting to read...");
-      const data: Buffer = await conn.read();
-      buf.push(data);
+			if (data.length === 0) {
+				return;
+			}
 
-      if (data.length === 0) {
-        return;
-      }
+			continue;
+		}
 
-      continue;
-    }
+		if (msg.data.equals(Buffer.from("quit\n"))) {
+			await conn.write(Buffer.from("Bye.\n"));
+			conn.destroy();
+			return;
+		}
+		const reply = msg;
+		reply.insertStart(Buffer.from("Echo: "));
 
-    if (msg.equals(Buffer.from("quit\n"))) {
-      await conn.write(Buffer.from("Bye.\n"));
-      conn.destroy();
-      return;
-    } else {
-      const reply = Buffer.concat([Buffer.from("Echo: "), msg]);
-
-      await conn.write(reply);
-    }
-  }
+		await conn.write(reply.data);
+	}
 }

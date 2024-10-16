@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 /**
  * A Buffer object in NodeJS is a like an array in other languages except for bytes.
  * It is a fixed-size chunk of binary data.
@@ -16,62 +17,116 @@
  */
 export class DynBuffer {
 	data: Buffer;
-	private _length: number;
-  private readTill: number = 0;
+	length: number;
 
-	constructor(data: Buffer | number = 0) {
-		if (typeof data === "number") {
-			this.data = Buffer.alloc(data);
-			this._length = data;
+	constructor(value: number | Buffer | string = 0) {
+		if (typeof value === "number") {
+			this.data = Buffer.alloc(value);
+			this.length = 0;
+		} else if (typeof value === "string") {
+			this.data = Buffer.from(value);
+			this.length = this.data.length;
 		} else {
-			this.data = data;
-			this._length = data.length;
+			this.data = value;
+			this.length = value.length;
 		}
 	}
 
-	get length() {
-		return this._length;
-	}
+	push(value: Buffer | DynBuffer) {
+		const newLen = this.length + value.length;
 
-	push(data: Buffer) {
-		const newLen = this.length + data.length;
+		if (newLen > this.data.length) {
+			// Increase the buffer size
+			const len = Math.max(this.data.length * 2, 32);
 
-		if (this.data.length < newLen) {
-			let cap = Math.max(this._length, 32);
-			while (cap < newLen) {
-				cap *= 2;
-			}
+			const newBuf = Buffer.alloc(len);
 
-			const grown = Buffer.alloc(cap);
-			this.data.copy(grown, 0, 0);
-			this.data = grown;
+			// copy data of prev buf to new buf
+			this.data.copy(newBuf);
+
+			// set new buf as this buf.
+			this.data = newBuf;
 		}
 
-		data.copy(this.data, this._length, 0);
-		this._length = newLen;
+		if (value instanceof DynBuffer) {
+			value.data.copy(this.data, this.length);
+		} else {
+			value.copy(this.data, this.length);
+		}
+		this.length = newLen;
 	}
 
-	pop(len: number): void {
-		this.data.copyWithin(0, len, this._length);
-		this._length -= len;
+	insertStart(value: Buffer) {
+		const newLen = value.length + this.length;
+
+		if (newLen > this.data.length) {
+			// Increase the buffer size
+			const len = Math.max(this.data.length * 2, 32);
+
+			const newBuf = Buffer.alloc(len);
+
+			this.data.copy(newBuf);
+
+			this.data = newBuf;
+		}
+
+		this.data.copyWithin(value.length, 0);
+		value.copy(this.data);
+		this.length = newLen;
 	}
 
-	stripTill(by: string): null | Buffer {
-		const i = this.data.subarray(this.readTill, this.length).indexOf(by) + this.readTill;
+	remove(start: number, _end?: number) {
+		const end = Math.min(_end || this.length, this.length);
+
+		this.data.copyWithin(start, end);
+
+		this.length -= end - start;
+
+		// prevent leakage
+		Buffer.alloc(this.data.length).copy(this.data, this.length);
+	}
+
+	subarray(start?: number, end?: number) {
+		const newBuf = Buffer.from(this.data.subarray(start, end));
+
+		return new DynBuffer(newBuf);
+	}
+
+	stripStart(till: string, inclusive = false): DynBuffer | null {
+		// get the index of till
+		const i = this.data.indexOf(till);
+		const n = till.length;
+
+		if (i < 0) {
+			// buf does not contain till
+			return null;
+		}
+
+		const newBuf = inclusive ? this.subarray(0, i + n) : this.subarray(0, i);
+
+		// remove the i + 1 bytes from the current buffer
+		this.remove(0, i + n);
+
+		return newBuf;
+	}
+
+	toString() {
+		return this.data.toString();
+	}
+
+	stripEnd(from: string, inclusive = false): DynBuffer | null {
+		// get the index of from
+		const i = this.data.lastIndexOf(from);
 
 		if (i < 0) {
 			return null;
 		}
 
-		const msg = Buffer.from(this.data.subarray(this.readTill, i + 1));
+		const newBuf = inclusive ? this.subarray(i) : this.subarray(i + 1);
 
-    this.readTill = i + 1
+		// remove the last len - i bytes from the current buffer
+		this.remove(i);
 
-    if (this.readTill > this._length / 2) {
-      this.pop(this.readTill);
-      this.readTill = 0;
-    }
-
-		return msg;
+		return newBuf;
 	}
 }

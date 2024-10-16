@@ -6,7 +6,7 @@ const server = new TCPListener();
 server.listen();
 
 while (true) {
-  console.log("Waiting for connection...")
+	console.log("Waiting for connection...");
 	const socket = await server.accept();
-  serve(socket);
+	serve(socket);
 }

@@ -22,7 +22,7 @@ export class TCPConn {
 		 */
 		socket.on("data", (data: Buffer) => {
 			// The reader must exist before the event is fired
-			console.assert(this.reader);
+			console.assert(this.reader, "reader must exist");
 
 			/**
 			 * The `data` event is emitted whenever data arrives, but the promise only exists when the program is reading from the socket.
@@ -61,7 +61,7 @@ export class TCPConn {
 
 	async read(): Promise<Buffer> {
 		// No concurrent reads
-		console.assert(!this.reader);
+		console.assert(!this.reader, "no concurrent reads");
 
 		return new Promise((resolve, reject) => {
 			if (this.error) {
@@ -103,6 +103,10 @@ export class TCPConn {
 				}
 			});
 		});
+	}
+
+	setEncoding(encoding?: BufferEncoding) {
+		this.socket.setEncoding(encoding);
 	}
 
 	destroy() {

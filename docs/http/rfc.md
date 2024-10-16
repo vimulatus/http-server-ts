@@ -86,16 +86,19 @@ A request-line begins with a method token, followed by a single space (SP), the 
 request-line = method SP request-target SP HTTP-version CRLF
 ```
 
-The method token indicates the request method to be performed on the target resource.
-> [!Warning] The request method is case-sensitive
+The [method](./request-method.md) token indicates the request method to be performed on the target resource.
 
 The request target identifies the target resource upon which to apply the request.
 
 Recipients typically parse the request-line into its component parts by splitting on whitespace, since no whitespace is allowed in the three components.
 Unfortunately, some user agents fail to properly encode or exclude whitespace found in hypertext references, resulting in those disallowed characters being sent in a request-target.
-Recipients of an invalid request-line should respond with either a 400 (Bad request) error or a 301 (Moved Permanently) redirect with the request-target properly encoded.
+Recipients of an invalid request-line should respond with either a `400 (Bad request)` error or a `301 (Moved Permanently)` redirect with the request-target properly encoded.
 A recipient should not attempt to autocorrect and then process the request without a redirect, since the invalid request-line might be deliberately crafted to bypass security filters along the request chain.
 
 HTTP does not place a predefined limit on the length of a request-line. 
-A server that receives a method longer than any that it implements should respond with a 501 (Not Implemented) status code.
-A server that receives a request-target longer than any URI it wishes to parse must respond with a 414 (URI Too Long) status code.
+A server that receives a method longer than any that it implements should respond with a `501 (Not Implemented)` status code.
+A server that receives a request-target longer than any URI it wishes to parse must respond with a `414 (URI Too Long)` status code.
+
+### Status Line
+
+The first line of a response message is the status line, consisting of the protocol version, a space (SP), the status code, another space, a possibly empty textual phrase describing the status code, and ending with CRLF.

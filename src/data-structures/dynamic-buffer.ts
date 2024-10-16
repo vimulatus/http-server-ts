@@ -16,85 +16,99 @@ import { Buffer } from "node:buffer";
  * To amortize the cost of copying, dynamic arrays are used.
  */
 export class DynBuffer {
-	data: Buffer;
+	private _data: Buffer;
 	length: number;
 
-	constructor(value: number | Buffer | string = 0) {
-		if (typeof value === "number") {
-			this.data = Buffer.alloc(value);
+	get data() {
+		return this._data.subarray(0, this.length);
+	}
+
+	constructor(value?: Buffer | string) {
+		if (typeof value === "string") {
+			this._data = Buffer.from(value);
+			this.length = this._data.length;
+		} else if (value === undefined) {
+			this._data = Buffer.alloc(0);
 			this.length = 0;
-		} else if (typeof value === "string") {
-			this.data = Buffer.from(value);
-			this.length = this.data.length;
 		} else {
-			this.data = value;
+			this._data = value;
 			this.length = value.length;
 		}
 	}
 
-	push(value: Buffer | DynBuffer) {
+	push(value: Buffer | DynBuffer | string) {
 		const newLen = this.length + value.length;
 
-		if (newLen > this.data.length) {
+		if (newLen > this._data.length) {
 			// Increase the buffer size
-			const len = Math.max(this.data.length * 2, 32);
+			const len = Math.max(this._data.length * 2, 32);
 
 			const newBuf = Buffer.alloc(len);
 
 			// copy data of prev buf to new buf
-			this.data.copy(newBuf);
+			this._data.copy(newBuf);
 
 			// set new buf as this buf.
-			this.data = newBuf;
+			this._data = newBuf;
 		}
 
 		if (value instanceof DynBuffer) {
-			value.data.copy(this.data, this.length);
+			value._data.copy(this._data, this.length);
+		} else if (typeof value === "string") {
+			const buf = Buffer.from(value);
+			buf.copy(this._data, this.length);
 		} else {
-			value.copy(this.data, this.length);
+			value.copy(this._data, this.length);
 		}
 		this.length = newLen;
 	}
 
-	insertStart(value: Buffer) {
+	insertStart(value: Buffer | DynBuffer | string) {
 		const newLen = value.length + this.length;
 
-		if (newLen > this.data.length) {
+		if (newLen > this._data.length) {
 			// Increase the buffer size
-			const len = Math.max(this.data.length * 2, 32);
+			const len = Math.max(this._data.length * 2, 32);
 
 			const newBuf = Buffer.alloc(len);
 
-			this.data.copy(newBuf);
+			this._data.copy(newBuf);
 
-			this.data = newBuf;
+			this._data = newBuf;
 		}
 
-		this.data.copyWithin(value.length, 0);
-		value.copy(this.data);
+		this._data.copyWithin(value.length, 0);
+		if (value instanceof DynBuffer) {
+			value.data.copy(this._data);
+		} else if (typeof value === "string") {
+			const buf = Buffer.from(value);
+			buf.copy(this._data);
+		} else {
+			value.copy(this._data);
+		}
 		this.length = newLen;
 	}
 
-	remove(start: number, _end?: number) {
+	remove(start = 0, _end?: number) {
 		const end = Math.min(_end || this.length, this.length);
 
-		this.data.copyWithin(start, end);
+		this._data.copyWithin(start, end);
 
 		this.length -= end - start;
 
 		// prevent leakage
-		Buffer.alloc(this.data.length).copy(this.data, this.length);
+		Buffer.alloc(this._data.length).copy(this._data, this.length);
 	}
 
 	subarray(start?: number, end?: number) {
-		const newBuf = Buffer.from(this.data.subarray(start, end));
+		const newBuf = Buffer.from(this._data.subarray(start, end));
 
 		return new DynBuffer(newBuf);
 	}
 
 	stripStart(till: string, inclusive = false): DynBuffer | null {
 		// get the index of till
-		const i = this.data.indexOf(till);
+		const i = this._data.indexOf(till);
 		const n = till.length;
 
 		if (i < 0) {
@@ -116,7 +130,7 @@ export class DynBuffer {
 
 	stripEnd(from: string, inclusive = false): DynBuffer | null {
 		// get the index of from
-		const i = this.data.lastIndexOf(from);
+		const i = this._data.lastIndexOf(from);
 
 		if (i < 0) {
 			return null;

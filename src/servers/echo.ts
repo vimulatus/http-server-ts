@@ -13,10 +13,10 @@ export async function serve(conn: TCPConn): Promise<void> {
 
 	while (true) {
 		console.log(buf.data);
-		const msg: null | DynBuffer = buf.stripStart("\n", true);
+		const msg: null | DynBuffer = buf.stripStart(CRLF, true);
 		if (!msg) {
 			console.log("Waiting to read...");
-			const data: Buffer = await conn.read();
+			const data: DynBuffer = await conn.read();
 			buf.push(data);
 
 			if (data.length === 0) {
@@ -27,13 +27,13 @@ export async function serve(conn: TCPConn): Promise<void> {
 		}
 
 		if (msg.data.equals(Buffer.from("quit\n"))) {
-			await conn.write(Buffer.from("Bye.\n"));
+			await conn.write(new DynBuffer("Bye.\n"));
 			conn.destroy();
 			return;
 		}
 		const reply = msg;
-		reply.insertStart(Buffer.from("Echo: "));
+		reply.insertStart("Echo: ");
 
-		await conn.write(reply.data);
+		await conn.write(reply);
 	}
 }

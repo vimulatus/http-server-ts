@@ -1,3 +1,4 @@
+import { DynBuffer } from "@/data-structures/dynamic-buffer";
 import type { Socket } from "net";
 
 /**
@@ -13,7 +14,7 @@ export class TCPConn {
 	ended: boolean = false;
 	error: null | Error = null;
 	private reader: null | {
-		resolve: (value: Buffer) => void;
+		resolve: (value: DynBuffer) => void;
 		reject: (reason: Error) => void;
 	} = null;
 	constructor(socket: Socket) {
@@ -30,7 +31,7 @@ export class TCPConn {
 			 */
 			socket.pause();
 
-			this.reader!.resolve(data);
+			this.reader!.resolve(new DynBuffer(data));
 
 			this.reader = null;
 		});
@@ -39,7 +40,7 @@ export class TCPConn {
 			this.ended = true;
 
 			if (this.reader) {
-				this.reader.resolve(Buffer.from("")); // EOF
+				this.reader.resolve(new DynBuffer("")); // EOF
 				this.reader = null;
 			}
 		});
@@ -59,7 +60,7 @@ export class TCPConn {
 		this.socket = socket;
 	}
 
-	async read(): Promise<Buffer> {
+	async read(): Promise<DynBuffer> {
 		// No concurrent reads
 		console.assert(!this.reader, "no concurrent reads");
 
@@ -70,7 +71,7 @@ export class TCPConn {
 			}
 
 			if (this.ended) {
-				resolve(Buffer.from(""));
+				resolve(new DynBuffer(""));
 				return;
 			}
 
@@ -81,7 +82,7 @@ export class TCPConn {
 		});
 	}
 
-	async write(data: Buffer): Promise<void> {
+	async write(data: DynBuffer): Promise<void> {
 		console.assert(data.length > 0);
 
 		return new Promise((resolve, reject) => {
@@ -95,7 +96,7 @@ export class TCPConn {
 				return;
 			}
 
-			this.socket.write(data, (err?: Error) => {
+			this.socket.write(data.data, (err?: Error) => {
 				if (err) {
 					reject(err);
 				} else {

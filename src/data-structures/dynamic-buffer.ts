@@ -143,4 +143,23 @@ export class DynBuffer {
 
 		return newBuf;
 	}
+
+	/**
+	 *
+	 * Compares `buf` with `target` and returns a number indicating whether `buf`comes before, after, or is the same as `target` in sort order.
+	 * Comparison is based on the actual sequence of bytes in each `Buffer`.
+	 *
+	 *   * `0` is returned if `target` is the same as `buf`
+	 *   * `1` is returned if `target` should come _before_`buf` when sorted.
+	 *   * `-1` is returned if `target` should come _after_`buf` when sorted.
+	 */
+	compare(to: string | Buffer | DynBuffer) {
+		if (typeof to === "string") {
+			return this.data.compare(Buffer.from(to));
+		} else if (to instanceof Buffer) {
+			return this.data.compare(to);
+		} else {
+			return this.data.compare(to.data);
+		}
+	}
 }

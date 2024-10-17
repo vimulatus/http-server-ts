@@ -1,12 +1,5 @@
-import { TCPListener } from "./tcp/server";
-import { serve } from "./servers/echo";
+import { HttpServer } from "./servers/http";
 
-const server = new TCPListener();
+const server = new HttpServer();
 
-server.listen();
-
-while (true) {
-	console.log("Waiting for connection...");
-	const socket = await server.accept();
-	serve(socket);
-}
+server.start();

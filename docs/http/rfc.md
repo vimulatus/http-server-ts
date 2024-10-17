@@ -102,3 +102,11 @@ A server that receives a request-target longer than any URI it wishes to parse m
 ### Status Line
 
 The first line of a response message is the status line, consisting of the protocol version, a space (SP), the status code, another space, a possibly empty textual phrase describing the status code, and ending with CRLF.
+```
+status-line = HTTP-version SP status-code SP reason-phrase CRLF
+```
+
+The status code element is a 3-digit integer code describing the result of the server's attempt to understand and satisfy the client's corresponding request. 
+
+The rest of the response message is to be interpreted in light of the semantics defined for that status code.
+
